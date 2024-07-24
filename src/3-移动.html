@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body></body>
+  <style>
+    canvas {
+      background-color: aqua;
+    }
+  </style>
+  <script>
+    const canvas = document.createElement('canvas');
+    const tipDom = document.querySelector('.tip');
+    canvas.width = 800;
+    canvas.height = 800;
+    document.body.appendChild(canvas);
+    const context = canvas.getContext('2d');
+    context.translate(100, 100);
+    context.arc(100, 100, 50, 0, 2 * Math.PI);
+    context.fill();
+  </script>
+</html>

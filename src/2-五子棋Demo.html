@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div class="tip">请黑棋落子</div>
+  </body>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      padding: 12px;
+    }
+    canvas {
+      background-color: #0ac;
+      display: block;
+      margin: 0 auto;
+    }
+    .tip {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+  </style>
+  <script>
+    const canvas = document.createElement('canvas');
+    const tipDom = document.querySelector('.tip');
+    canvas.width = 800;
+    canvas.height = 800;
+    document.body.appendChild(canvas);
+    const context = canvas.getContext('2d');
+    // 1.绘制棋盘格
+    let isBlack = true;
+    // 保存所有的棋子
+    let circles = [];
+    // 是否结束游戏
+    let endGame = false;
+    for (let i = 1; i < 16; i++) {
+      // 画横向棋盘
+      context.moveTo(50, 50 * i);
+      context.lineTo(750, 50 * i);
+      context.stroke();
+      // 画纵向棋盘
+      context.moveTo(50 * i, 50);
+      context.lineTo(50 * i, 750);
+      context.stroke();
+    }
+    for (let i = 1; i < 16; i++) {
+      circles[i] = [];
+    }
+
+    // 2.注册点击事件
+    canvas.addEventListener('click', function (e) {
+      const { offsetX, offsetY } = e;
+      // 判断棋盘边界的情况
+      if (handleCoverBoundary(offsetX, offsetY)) {
+        return null;
+      }
+      const [x, y] = handleComputedPosition(offsetX, offsetY);
+      if (endGame) {
+        return;
+      }
+      // 判断这个位置是否有棋子落位
+      if (circles[x][y]) {
+        tipDom.innerHTML = '不能重复落子';
+        return;
+      }
+      // 存放此次棋子的坐标
+      handleCachePiecePosition(x, y);
+      context.beginPath();
+      // 绘制棋子的渐变色
+      let tx = isBlack ? x * 50 - 10 : x * 50 + 10;
+      let ty = isBlack ? y * 50 - 10 : y * 50 + 10;
+      context.fillStyle = handleRenderPieceColor(tx, ty);
+      context.arc(x * 50, y * 50, 20, 0, 2 * Math.PI);
+      context.fill();
+      context.stroke();
+      context.closePath();
+      endGame =
+        handleCheckHorizontalSuccess(x, y) ||
+        handleCheckVerticalSuccess(x, y) ||
+        handleCheckNW2SE(x, y) ||
+        handleCheckNE2SW(x, y);
+      console.log(endGame, 'endGame');
+      if (endGame) {
+        tipDom.innerHTML = `${
+          isBlack ? '黑' : '白'
+        }子已经获胜，请刷新页面继续游戏`;
+        return;
+      }
+      tipDom.innerHTML = isBlack ? '请白棋落子' : '请黑棋落子';
+      isBlack = !isBlack;
+    });
+    // 判断边界情况
+    const handleCoverBoundary = (offsetX, offsetY) => {
+      return offsetX < 25 || offsetY < 25 || offsetX > 775 || offsetY > 775;
+    };
+    // 绘制渐变色;
+    const handleRenderPieceColor = (tx, ty) => {
+      const g = context.createRadialGradient(tx, ty, 0, tx, ty, 30);
+      g.addColorStop(0, isBlack ? '#ccc' : '#666');
+      g.addColorStop(1, isBlack ? '#000' : '#fff');
+      return g;
+    };
+    const handleComputedPosition = (offsetX, offsetY) => {
+      const x = Math.floor((offsetX + 25) / 50);
+      const y = Math.floor((offsetY + 25) / 50);
+      return [x, y];
+    };
+    const handleCachePiecePosition = (x, y) => {
+      circles[x][y] = isBlack ? 'black' : 'white';
+    };
+    // 判断纵向是否胜利
+    const handleCheckVerticalSuccess = (x, y) => {
+      const target = isBlack ? 'black' : 'white';
+      let up = 1;
+      let down = 1;
+      let count = 1;
+      let timer = 1;
+      while (timer < 10000) {
+        timer++;
+        // 判断向上的同色棋子
+        if (circles[x][y - up] && circles[x][y - up] === target) {
+          count++;
+        }
+        // 判断向下的同色棋子
+        if (circles[x][y + down] && circles[x][y + down] === target) {
+          count++;
+        }
+        if (
+          count >= 5 ||
+          (circles[x][y - up] !== target && circles[x][y + down] !== target) // 处理非连续的情况
+        ) {
+          break;
+        }
+        down++;
+        up++;
+      }
+      return count >= 5;
+    };
+    // 判断横向是否胜利
+    const handleCheckHorizontalSuccess = (x, y) => {
+      const target = isBlack ? 'black' : 'white';
+      let left = 0;
+      let right = 0;
+      let count = 1;
+      let timer = 1;
+      while (timer < 10000) {
+        timer++;
+        // 判断向左的同色棋子
+        left++;
+        if (circles[x - left][y] && circles[x - left][y] === target) {
+          count++;
+        }
+        // 判断向下的同色棋子
+        right++;
+        if (circles[x + right][y] && circles[x + right][y] === target) {
+          count++;
+        }
+        if (
+          count >= 5 ||
+          (circles[x - left][y] !== target && circles[x + right][y] !== target)
+        ) {
+          break;
+        }
+      }
+      return count >= 5;
+    };
+    // 判断左上到右下是否胜利
+    const handleCheckNW2SE = (x, y) => {
+      const target = isBlack ? 'black' : 'white';
+      let lt = 1; // 左上
+      let rb = 1; // 右下
+      let count = 1;
+      let timer = 1;
+      while (timer < 10000) {
+        timer++;
+        // 判断向左下的同色棋子
+        if (
+          circles[x - lt] &&
+          circles[x - lt][y - lt] &&
+          circles[x - lt][y - lt] === target
+        ) {
+          count++;
+        }
+        // 判断向右下的同色棋子
+        if (
+          circles[x + rb] &&
+          circles[x + rb][y + rb] &&
+          circles[x + rb][y + rb] === target
+        ) {
+          count++;
+        }
+        if (
+          count >= 5 ||
+          (circles[x - lt] &&
+            circles[x - lt][y - lt] !== target &&
+            circles[x + rb] &&
+            circles[x + rb][y + rb] !== target)
+        ) {
+          break;
+        }
+        lt++;
+        rb++;
+      }
+      return count >= 5;
+    };
+    // 判断右上到左下是否胜利
+    const handleCheckNE2SW = (x, y) => {
+      const target = isBlack ? 'black' : 'white';
+      let lb = 1; // 左下
+      let rt = 1; // 右上
+      let count = 1;
+      let timer = 1;
+      while (timer < 10000) {
+        timer++;
+        // 判断向左下的同色棋子
+        if (
+          circles[x - lb] &&
+          circles[x - lb][y + lb] &&
+          circles[x - lb][y + lb] === target
+        ) {
+          count++;
+        }
+        // 判断向右上的同色棋子
+        if (
+          circles[x + rt] &&
+          circles[x + rt][y - rt] &&
+          circles[x + rt][y - rt] === target
+        ) {
+          count++;
+        }
+        if (
+          count >= 5 ||
+          (circles[x - lb] &&
+            circles[x - lb][y + lb] !== target &&
+            circles[x + rt] &&
+            circles[x + rt][y - rt] !== target)
+        ) {
+          break;
+        }
+        lb++;
+        rt++;
+      }
+      return count >= 5;
+    };
+  </script>
+</html>
